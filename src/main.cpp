@@ -1,3 +1,6 @@
+//TODO
+//chenge the time perception, so that beep timitngs are calculated from "gamelenght" and not the other way around
+
 #include <Arduino.h>
 
 #define MAX_PIN_NUMBER 43
