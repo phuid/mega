@@ -1,5 +1,6 @@
 //TODO
 //chenge the time perception, so that beep timitngs are calculated from "gamelenght" and not the other way around
+//-> gamelenght instead of ticktime
 
 #include <Arduino.h>
 
