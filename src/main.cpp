@@ -3,6 +3,9 @@
 #define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
 
+#define LED 50
+#define SIREN LED_BUILTIN
+
 struct Pin
 {
   uint8_t first;
@@ -13,10 +16,26 @@ Pin correct;
 
 bool previous[10][10];
 
+#define DIVISION_CONST 40
+
+unsigned long ledtime = 0;
+unsigned long ledstart = 0;
+bool ledvalue = 0;
+unsigned long sirentime = 0;
+unsigned long sirenstart = 0;
+bool sirenvalue = 0;
+unsigned long ticktime = 1000;
+
+bool gameover = 0;
+
 void setup()
 {
   Serial.begin(115200);
   Serial.println("Hello World!");
+
+  pinMode(LED, OUTPUT);
+  pinMode(SIREN, OUTPUT);
+
   for (size_t i = MIN_PIN_NUMBER; i <= MAX_PIN_NUMBER; i++)
   {
     pinMode(i, i % 2 == 0 ? INPUT_PULLUP : OUTPUT);
@@ -47,16 +66,16 @@ void setup()
     }
   }
 
-  Serial.print("initial: ");
-  Serial.println();
-  for (size_t i = 0; i < 10; i++)
-  {
-    for (size_t u = 0; u < 10; u++)
-    {
-      Serial.print(initial[i][u]);
-    }
-    Serial.println();
-  }
+  // Serial.print("initial: ");
+  // Serial.println();
+  // for (size_t i = 0; i < 10; i++)
+  // {
+  //   for (size_t u = 0; u < 10; u++)
+  //   {
+  //     Serial.print(initial[i][u]);
+  //   }
+  //   Serial.println();
+  // }
 
   bool pin_selected = 0;
 
@@ -115,42 +134,93 @@ void setup()
   Serial.println(correct.first);
   Serial.println(correct.second);
   Serial.println();
+
+  ledtime = 20;
 }
 
 void loop()
 {
-  bool current[10][10];
-
-  for (size_t i = MIN_PIN_NUMBER; i <= MAX_PIN_NUMBER; i++)
+  if (!gameover)
   {
-    if (i % 2 == 0)
-      continue;
-
-    for (size_t u = MIN_PIN_NUMBER; u <= MAX_PIN_NUMBER; u++)
+    if (ledtime < millis() - ledstart)
     {
-      if (u % 2 == 1)
-        digitalWrite(u, 1);
+      ledvalue = !ledvalue;
+      ledtime = ticktime;
+      ledstart = millis();
+      sirenvalue = 1;
+      sirenstart = millis();
+      sirentime = 20;
+
+      Serial.println(ticktime);
+
+      if (ticktime > 2)
+        ticktime -= ticktime / DIVISION_CONST;
     }
-    digitalWrite(i, 0);
-    delay(10);
 
-    for (size_t u = MIN_PIN_NUMBER; u <= MAX_PIN_NUMBER; u++)
+    if (sirentime < millis() - sirenstart)
     {
-      if (u % 2 == 0)
+      sirenvalue = 0;
+    }
+
+    bool current[10][10];
+
+    for (size_t i = MIN_PIN_NUMBER; i <= MAX_PIN_NUMBER; i++)
+    {
+      if (i % 2 == 0)
+        continue;
+
+      for (size_t u = MIN_PIN_NUMBER; u <= MAX_PIN_NUMBER; u++)
       {
-        current[(i - MIN_PIN_NUMBER) / 2][(u - MIN_PIN_NUMBER) / 2] = digitalRead(u);
+        if (u % 2 == 1)
+          digitalWrite(u, 1);
+      }
+      digitalWrite(i, 0);
+      delay(2);
+
+      for (size_t u = MIN_PIN_NUMBER; u <= MAX_PIN_NUMBER; u++)
+      {
+        if (u % 2 == 0)
+        {
+          current[(i - MIN_PIN_NUMBER) / 2][(u - MIN_PIN_NUMBER) / 2] = digitalRead(u);
+        }
+      }
+    }
+
+    for (size_t i = 0; i < 10; i++)
+    {
+      for (size_t u = 0; u < 10; u++)
+      {
+        if (current[i][u] != previous[i][u] && current[i][u])
+        {
+          if (i * 2 + MIN_PIN_NUMBER == correct.first && u * 2 + MIN_PIN_NUMBER == correct.second)
+          {
+            Serial.println("correct!");
+          }
+          else
+          {
+            Serial.println("wrong!");
+          }
+        }
+        previous[i][u] = current[i][u];
       }
     }
   }
-
-  for (size_t i = 0; i < 10; i++)
+  if (ticktime < 70 && !gameover)
   {
-    for (size_t u = 0; u < 10; u++)
+    gameover = 1;
+    ledvalue = 1;
+    sirenstart = millis();
+    sirentime = 2000;
+    sirenvalue = 1;
+  }
+  if (gameover)
+  {
+    if (sirentime < millis() - sirenstart)
     {
-      if (current[i][u] != previous[i][u] && current[i][u])
-      {
-        Serial.println(i * 2 + MIN_PIN_NUMBER == correct.first && u * 2 + MIN_PIN_NUMBER == correct.second ? "correct" : "wrong");
-      }
+      ledvalue = 0;
+      sirenvalue = 0;
     }
   }
+  digitalWrite(LED, ledvalue);
+  digitalWrite(SIREN, sirenvalue);
 }
