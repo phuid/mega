@@ -1,14 +1,20 @@
-//TODO
-//chenge the time perception, so that beep timitngs are calculated from "gamelenght" and not the other way around
+// TODO
+// chenge the time perception, so that beep timitngs are calculated from "gamelenght" and not the other way around
 //-> gamelenght instead of ticktime
 
 #include <Arduino.h>
 
+#define BEEPLENGTH 20 //length of every beep
+#define WRONG_BEEPSEQ 50, 250, 450, 450, 450 //beep pattern played when the CORRECT wire is disconnected
+#define CORRECT_BEEPSEQ 50, 250, 300, 350, 400 //beep pattern played when the WRONG wire is disconnected
+#define EXPLOSION_LENGTH 2000 //length of the last beep & blink
+#define GAMELENGTH 40000 // milliseconds
+
 #define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
 
-#define LED 50
-#define SIREN LED_BUILTIN
+#define LED LED_BUILTIN
+#define SIREN 50
 #define RESTART_PIN 53
 
 struct Pin
@@ -21,16 +27,12 @@ Pin correct;
 
 bool previous[10][10];
 
-#define DIVISION_CONST 40
-#define TICKTIME_THRESHOLD 85
-
 unsigned long ledtime = 0;
 unsigned long ledstart = 0;
 bool ledvalue = 0;
 unsigned long sirentime = 0;
 unsigned long sirenstart = 0;
 bool sirenvalue = 0;
-unsigned long ticktime = 1000;
 
 unsigned long sequence[5];
 unsigned long sequence_start;
@@ -157,7 +159,6 @@ void setup()
 void restart()
 {
   Serial.println("restart");
-  ticktime = 1000;
   ledtime = 0;
   sirentime = 0;
   ledstart = 0;
@@ -252,14 +253,35 @@ void loop()
   {
     if (ledtime < millis() - ledstart)
     {
-      led(ticktime);
-      if (!sirenvalue)
-      {
-        siren(20, 1);
-      }
 
-      if (ticktime > 2)
-        ticktime -= ticktime / DIVISION_CONST;
+//from https://github.com/WouterGritter/CSGO-Bomb/blob/master/armed_state.ino
+/**
+ * Time between beeps is an exponential function
+ *
+ * A0 = 1.04865151217746
+ * A1 = 0.244017811416199
+ * A2 = 1.76379778668885
+ *
+ * Y(bps) = A0 * E^(A1*X + A2*X^2)
+ * X = % OF TIME PASSED (0.0 - 1.0)
+ * Y = BEEPS PER SECOND
+ */
+#define BEEP_A0 1.04865151217746
+#define BEEP_A1 0.244017811416199
+#define BEEP_A2 1.76379778668885
+      // Calculate next beep time
+      float x = (float)(millis() - gamestart) / GAMELENGTH;
+      float n = BEEP_A1 * x + BEEP_A2 * x * x;
+      float bps = BEEP_A0 * exp(n);
+
+      // Convert bps (beeps per second) to a wait time in milliseconds
+      int waitMS = (int)(1000.0 / bps);
+
+      led(waitMS);
+      if (!sirenvalue && !sequenceactive)
+      {
+        siren(BEEPLENGTH, 1);
+      }
     }
 
     if (sirentime < millis() - sirenstart)
@@ -301,35 +323,27 @@ void loop()
           {
             Serial.print((float)(millis() - gamestart) / 1000);
             Serial.println(": correct!");
-            makesequence(50, 250, 300, 350, 400);
+            makesequence(CORRECT_BEEPSEQ);
             gameover = 1;
           }
           else
           {
             Serial.print((float)(millis() - gamestart) / 1000);
             Serial.println(": wrong!");
-            siren(500, 1);
+            makesequence(WRONG_BEEPSEQ);
           }
         }
         previous[i][u] = current[i][u];
       }
     }
   }
-  if (ticktime < TICKTIME_THRESHOLD && !gameover)
+  if (millis() - gamestart > GAMELENGTH && !gameover)
   {
     Serial.print((float)(millis() - gamestart) / 1000);
     Serial.println(": BOOM!");
     gameover = 2;
-    ledvalue = 1;
-    siren(2000, 1);
-  }
-  if (gameover == 2)
-  {
-    if (sirentime < millis() - sirenstart)
-    {
-      ledvalue = 0;
-      sirenvalue = 0;
-    }
+    led(EXPLOSION_LENGTH, 1);
+    siren(EXPLOSION_LENGTH, 1);
   }
   digitalWrite(LED, ledvalue);
   if (!sequenceactive)
