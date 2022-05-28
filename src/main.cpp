@@ -3,8 +3,8 @@
 #define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
 
-#define LED LED_BUILTIN
-#define SIREN 50
+#define LED 50
+#define SIREN LED_BUILTIN
 
 struct Pin
 {
@@ -138,20 +138,44 @@ void setup()
   ledtime = 20;
 }
 
+void led(unsigned long time, bool value)
+{
+  ledstart = millis();
+  ledtime = time;
+  ledvalue = value;
+}
+
+void led(unsigned long time)
+{
+  ledstart = millis();
+  ledtime = time;
+  ledvalue = !ledvalue;
+}
+
+void siren(unsigned long time, bool value)
+{
+  sirenstart = millis();
+  sirentime = time;
+  sirenvalue = value;
+}
+
+void siren(unsigned long time)
+{
+  sirenstart = millis();
+  sirentime = time;
+  sirenvalue = !sirenvalue;
+}
+
 void loop()
 {
   if (!gameover)
   {
     if (ledtime < millis() - ledstart)
     {
-      ledvalue = !ledvalue;
-      ledtime = ticktime;
-      ledstart = millis();
+      led (ticktime);
       if (!sirenvalue)
       {
-        sirenvalue = 1;
-        sirenstart = millis();
-        sirentime = 20;
+        siren(20, 1);
       }
       Serial.println(ticktime);
 
@@ -202,9 +226,7 @@ void loop()
           else
           {
             Serial.println("wrong!");
-            sirentime = 500;
-            sirenvalue = 1;
-            sirenstart = millis();
+            siren(500, 1);
           }
         }
         previous[i][u] = current[i][u];
