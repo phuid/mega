@@ -3,8 +3,8 @@
 #define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
 
-#define LED 50
-#define SIREN LED_BUILTIN
+#define LED LED_BUILTIN
+#define SIREN 50
 
 struct Pin
 {
@@ -147,10 +147,12 @@ void loop()
       ledvalue = !ledvalue;
       ledtime = ticktime;
       ledstart = millis();
-      sirenvalue = 1;
-      sirenstart = millis();
-      sirentime = 20;
-
+      if (!sirenvalue)
+      {
+        sirenvalue = 1;
+        sirenstart = millis();
+        sirentime = 20;
+      }
       Serial.println(ticktime);
 
       if (ticktime > 2)
@@ -195,10 +197,14 @@ void loop()
           if (i * 2 + MIN_PIN_NUMBER == correct.first && u * 2 + MIN_PIN_NUMBER == correct.second)
           {
             Serial.println("correct!");
+            gameover = 1;
           }
           else
           {
             Serial.println("wrong!");
+            sirentime = 500;
+            sirenvalue = 1;
+            sirenstart = millis();
           }
         }
         previous[i][u] = current[i][u];
