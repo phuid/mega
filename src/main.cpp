@@ -4,11 +4,11 @@
 
 #include <Arduino.h>
 
-#define BEEPLENGTH 20 //length of every beep
-#define WRONG_BEEPSEQ 50, 250, 450, 450, 450 //beep pattern played when the CORRECT wire is disconnected
-#define CORRECT_BEEPSEQ 50, 250, 300, 350, 400 //beep pattern played when the WRONG wire is disconnected
-#define EXPLOSION_LENGTH 2000 //length of the last beep & blink
-#define GAMELENGTH 40000 // milliseconds
+#define BEEPLENGTH 20                         // length of every beep
+#define WRONG_BEEPSEQ 50, 250, 550, 550, 550   // beep pattern played when the CORRECT wire is disconnected
+#define CORRECT_BEEPSEQ 50, 250, 300, 350, 400 // beep pattern played when the WRONG wire is disconnected
+#define EXPLOSION_LENGTH 2000                  // length of the last beep & blink
+#define GAMELENGTH 40000                       // milliseconds
 
 #define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
@@ -222,39 +222,12 @@ void loop()
     restart();
   }
 
-  if (sequenceactive)
-  {
-    bool on = 0;
-    for (size_t i = 0; i < sizeof(sequence) / sizeof(sequence[0]); i += 2)
-    {
-      // Serial.print(sequence[i]);
-      // Serial.print(" ");
-      // Serial.println((millis() - sequence_start < sequence[i - 1] && millis() - sequence_start < sequence[i]) ? 0 : 1);
-      if (millis() - sequence_start < sequence[0] || (millis() - sequence_start > sequence[i - 1] && millis() - sequence_start < sequence[i]))
-      {
-        on = 1;
-        break;
-      }
-    }
-    // Serial.print(millis() - sequence_start);
-    // Serial.print(" ");
-    // Serial.println(on);
-
-    digitalWrite(SIREN, on);
-
-    sequenceactive = sequence[4] > millis() - sequence_start;
-    if (!sequenceactive)
-    {
-      digitalWrite(SIREN, 0);
-    }
-  }
-
   if (!gameover)
   {
     if (ledtime < millis() - ledstart)
     {
 
-//from https://github.com/WouterGritter/CSGO-Bomb/blob/master/armed_state.ino
+// from https://github.com/WouterGritter/CSGO-Bomb/blob/master/armed_state.ino
 /**
  * Time between beeps is an exponential function
  *
@@ -284,7 +257,7 @@ void loop()
       }
     }
 
-    if (sirentime < millis() - sirenstart)
+    if (!sequenceactive && sirentime < millis() - sirenstart)
     {
       sirenvalue = 0;
     }
@@ -302,7 +275,6 @@ void loop()
           digitalWrite(u, 1);
       }
       digitalWrite(i, 0);
-      delay(2);
 
       for (size_t u = MIN_PIN_NUMBER; u <= MAX_PIN_NUMBER; u++)
       {
@@ -345,7 +317,42 @@ void loop()
     led(EXPLOSION_LENGTH, 1);
     siren(EXPLOSION_LENGTH, 1);
   }
+
+  if (sirentime < millis() - sirenstart)
+  {
+    sirenvalue = 0;
+  }
+
+  if (GAMELENGTH + EXPLOSION_LENGTH < millis() - gamestart)
+  {
+    ledvalue = 0;
+    sirenvalue = 0;
+    sequenceactive = 0;
+  }
+
+  if (sequenceactive)
+  {
+    bool on = 0;
+    for (size_t i = 0; i < sizeof(sequence) / sizeof(sequence[0]); i += 2)
+    {
+      // Serial.print(sequence[i]);
+      // Serial.print(" ");
+      // Serial.println((millis() - sequence_start < sequence[i - 1] && millis() - sequence_start < sequence[i]) ? 0 : 1);
+      if (millis() - sequence_start < sequence[0] || (millis() - sequence_start > sequence[i - 1] && millis() - sequence_start < sequence[i]))
+      {
+        on = 1;
+        break;
+      }
+    }
+    // Serial.print(millis() - sequence_start);
+    // Serial.print(" ");
+    // Serial.println(on);
+
+    sirenvalue = on;
+
+    sequenceactive = sequence[4] > millis() - sequence_start;
+  }
+
   digitalWrite(LED, ledvalue);
-  if (!sequenceactive)
-    digitalWrite(SIREN, sirenvalue);
+  digitalWrite(SIREN, sirenvalue);
 }
