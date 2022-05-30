@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-#define BEEPLENGTH 20                         // length of every beep
+#define BEEPLENGTH 100                         // length of every beep
 #define WRONG_BEEPSEQ 50, 250, 550, 550, 550   // beep pattern played when the CORRECT wire is disconnected
 #define CORRECT_BEEPSEQ 50, 250, 300, 350, 400 // beep pattern played when the WRONG wire is disconnected
 #define EXPLOSION_LENGTH 2000                  // length of the last beep & blink
@@ -54,7 +54,6 @@ void setup()
   {
     pinMode(i, i % 2 == 0 ? INPUT_PULLUP : OUTPUT);
   }
-  pinMode(53, OUTPUT);
 
   bool initial[10][10];
 
@@ -244,7 +243,7 @@ void loop()
 #define BEEP_A2 1.76379778668885
       // Calculate next beep time
       float x = (float)(millis() - gamestart) / GAMELENGTH;
-      float n = BEEP_A1 * x + BEEP_A2 * x * x;
+      float n = BEEP_A1 * x +  BEEP_A2 * x * x;
       float bps = BEEP_A0 * exp(n);
 
       // Convert bps (beeps per second) to a wait time in milliseconds
@@ -320,6 +319,11 @@ void loop()
 
   if (sirentime < millis() - sirenstart)
   {
+    sirenvalue = 0;
+  }
+
+  if (gameover == 1) {
+    ledvalue = 0;
     sirenvalue = 0;
   }
 
