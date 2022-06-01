@@ -10,8 +10,8 @@
 #define EXPLOSION_LENGTH 2000                  // length of the last beep & blink
 #define GAMELENGTH 40000                       // milliseconds
 
-#define MAX_PIN_NUMBER 43
 #define MIN_PIN_NUMBER 24
+#define MAX_PIN_NUMBER 43
 
 #define LED LED_BUILTIN
 #define SIREN 50
